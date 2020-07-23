@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 mditty = { path = "../mditty" }
+toml = "0.5"
+serde = { version = "1.0.114", features = ["derive"] }
