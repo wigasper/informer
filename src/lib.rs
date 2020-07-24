@@ -23,15 +23,15 @@ mod tests {
     #[test]
     fn get_default_config_0() {
         let cfg = get_default_config();
-
+        
+        println!("{:?}", cfg.main.directories);
         assert_eq!(cfg.main.title, Some("Title placeholder".to_owned()));
         assert_eq!(cfg.main.notes, Some(true));
-        assert_eq!(cfg.main.metadata, Some("./metadata.tsv".to_owned()));
     }
 
     #[test]
     fn find_0() {
-        let its = find(&PathBuf::from("."), &vec!["rs".to_owned()]);
+        let its = find(&PathBuf::from("."), &[&"rs".to_owned()]);
 
         let expected = vec![
             PathBuf::from("./src/config.rs"),

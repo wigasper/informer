@@ -11,10 +11,14 @@ pub struct MainCfg {
     pub title: Option<String>,
     pub logo: Option<String>,
     pub notes: Option<bool>,
-    pub metadata: Option<String>,
-    pub scripts: Option<String>,
-    pub q2exports: Option<String>,
-    pub notebooks: Option<String>,
+    pub entities: Option<Vec<Vec<String>>>,
+    pub directories: Option<Vec<Vec<String>>>,
+    //pub metadata: Option<String>,
+    //pub pipelines: Option<String>,
+    //pub scripts: Option<String>,
+    //pub q2exports: Option<String>,
+    //pub notebooks: Option<String>,
+    pub order: Option<Vec<String>>,
 }
 
 #[derive(Deserialize)]
@@ -29,13 +33,36 @@ pub fn get_default_config() -> Config {
     title = 'Title placeholder'
     logo = './logo.png'
     notes = true
-    metadata = './metadata.tsv'
-    scripts = './scripts'
-    q2exports = './exports'
-    notebooks = './notebooks'
-    "#,
-    )
-    .unwrap();
+   
+    # Distinct entities that are given their own 
+    # section with a link
+    # Format: ['Label', 'Path']
+    entities = [
+        ['Metadata', './metadata.tsv']
+    ]
+    
+    # Directories that will be searched
+    # Format: ['Label', 'Path']
+    directories = [
+        ['Pipelines', './pipelines'],
+        ['Scripts', './scripts'],
+        ['QIIME2 Exports', './exports'],
+        ['Notebooks', './notebooks']
+    ]
+
+    order = [
+            'logo', 
+            'title', 
+            'notes', 
+            'Metadata',
+            'Scripts',
+            'Pipelines',
+            'Notebooks',
+            'QIIME2 Exports',
+    ]
+
+    
+    "#,).unwrap();
 
     config
 }
