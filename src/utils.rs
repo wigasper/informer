@@ -1,7 +1,10 @@
-use mditty::utils::*;
-
 use std::path::PathBuf;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::prelude::*;
+use std::io::LineWriter;
+
+use mditty::utils::*;
 
 use crate::config::*;
 
@@ -10,34 +13,47 @@ use crate::config::*;
 
 
 // pandoc probably best at the end, in case 
-pub fn builder(config: Config) {
+pub fn init(config: Config) {
     //let mut output_data: HashMap<String, Vec<String>> = parse_config(config);
     
     // labels for sections are mapped to filepaths that will be in those sections
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
     
-    
+    if let Some(logo) = config.main.logo {
+        entities_map.insert("logo".to_owned(), PathBuf::from(logo));
+    }
 
     if let Some(directories) = config.main.directories {
         directories_map = directory_handler(&directories);
     }
 
     if let Some(entities) = config.main.entities {
-        entities_map = entity_handler(&entities);
+        entity_handler(&entities, &mut entities_map);
     }
 
-
+    //write_markdown();
 }
 
-pub fn entity_handler(entities: &Vec<Vec<String>>) -> HashMap<String, PathBuf> {
-    let map_out = HashMap::new();
+pub fn entity_handler(entities: &Vec<Vec<String>>, 
+                      entities_map: &mut HashMap<String, PathBuf>) {
+    //let mut map_out = HashMap::new();
+    
+    // maybe need to add title and logo here since they are valid entities
+    for entity in entities.iter() {
+        if entity.len() != 2 {
+           panic!("Error in config, entity entries must be of length 2
+                  like so: ['Label', 'path'], problem with: {:?}", entity);
+        }       
+        
+        entities_map.insert(entity[0].to_owned(), PathBuf::from(entity[1].to_owned()));
+    }
 
-    map_out
+    //map_out
 }
 
 pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<PathBuf>> {
-    let map_out = HashMap::new();
+    let mut map_out = HashMap::new();
     
     let extension_map = mditty::utils::get_map();
     let extensions: Vec<&String> = extension_map.keys().collect();
@@ -55,11 +71,59 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
 
     map_out
 }
-        //markdown.push(format!(
-        //    "<p align='center'>\n\t<img src='{}'/>\n</p>\n\n",
-        //    logo_path
-        //));
-    //}
+
+pub fn generate_markdown(config: Config, directories: HashMap<String, Vec<PathBuf>>,
+                      entities: HashMap<String, PathBuf>) -> Vec<String> {
+    let mut markdown: Vec<String> = Vec::new();
+    let temp: Vec<&str> = vec!["logo", "title", "notes", "Metadata", "Scripts",
+                                "Pipelines", "Notebooks", "QIIME2 Exports"];
+    let order: Vec<String> = temp.iter().map(|i| i.to_owned().to_owned()).collect();   
+    
+    if let Some(cfg_order) = config.main.order {
+        let order = cfg_order;
+    } 
+    
+    // TODO: ensure no duplicates in order container
+    for item in order.iter() {
+        // special cases
+        if item == "logo" {
+            let logo = entities.get("logo").unwrap_or_else(|| {
+                panic!("No 'logo' key in entities, utils::generate_markdown()");
+            });
+
+            write_logo(&mut markdown, &logo);
+        }
+
+        if item == "title" {
+            if let Some(title) = config.main.title.to_owned() {
+                markdown.push(format!("# {}\n\n", title));
+            } else {
+                markdown.push("Title\n\n".to_owned())
+            }
+        }
+
+    }
+    
+    markdown
+    
+}
+
+/*
+    let out_path = PathBuf::from("index.md");
+
+    let out_file = File::create(&output_path).unwrap_or_else(|why| {
+        panic!("Could not create output file: {}", why);
+    });
+    let mut out_file = LineWriter::new(out_file);
+    
+    if let Some(
+
+}*/
+pub fn write_logo(markdown: &mut Vec<String>, logo: &PathBuf) {
+    let logo_path = logo.to_str().unwrap();
+    markdown.push(format!("<p align='center'>\n\t<img src='{}'/>\n</p>\n\n", logo_path));
+}
+
 /*
     if let Some(title) = config.main.title {
         //markdown.push(format!("# {}\n\n", title));
