@@ -1,8 +1,8 @@
-use std::path::PathBuf;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::LineWriter;
+use std::path::PathBuf;
 
 use mditty::utils::*;
 
@@ -11,15 +11,14 @@ use crate::config::*;
 // TODO: this needs to be able to update an existing report
 // updates should only affect certain sections
 
-
-// pandoc probably best at the end, in case 
+// pandoc probably best at the end, in case
 pub fn init(config: Config) {
     //let mut output_data: HashMap<String, Vec<String>> = parse_config(config);
-    
+
     // labels for sections are mapped to filepaths that will be in those sections
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
-    
+
     if let Some(logo) = config.main.logo {
         entities_map.insert("logo".to_owned(), PathBuf::from(logo));
     }
@@ -35,17 +34,19 @@ pub fn init(config: Config) {
     //write_markdown();
 }
 
-pub fn entity_handler(entities: &Vec<Vec<String>>, 
-                      entities_map: &mut HashMap<String, PathBuf>) {
+pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
     //let mut map_out = HashMap::new();
-    
+
     // maybe need to add title and logo here since they are valid entities
     for entity in entities.iter() {
         if entity.len() != 2 {
-           panic!("Error in config, entity entries must be of length 2
-                  like so: ['Label', 'path'], problem with: {:?}", entity);
-        }       
-        
+            panic!(
+                "Error in config, entity entries must be of length 2
+                  like so: ['Label', 'path'], problem with: {:?}",
+                entity
+            );
+        }
+
         entities_map.insert(entity[0].to_owned(), PathBuf::from(entity[1].to_owned()));
     }
 
@@ -55,15 +56,19 @@ pub fn entity_handler(entities: &Vec<Vec<String>>,
 pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<PathBuf>> {
     let mut map_out = HashMap::new();
     
-    let extension_map = mditty::utils::get_map();
+    // could borrow this from init
+    let extension_map = mditty::utils::get_ext_map();
     let extensions: Vec<&String> = extension_map.keys().collect();
 
     for entry in directories.iter() {
         if entry.len() != 2 {
-            panic!("Error in config, directory entries must be of length 2
-                   like so: ['Label', 'path'], problem with: {:?}", entry);
+            panic!(
+                "Error in config, directory entries must be of length 2
+                   like so: ['Label', 'path'], problem with: {:?}",
+                entry
+            );
         }
-        
+
         let files = find(&PathBuf::from(entry[1].to_owned()), &extensions);
 
         map_out.insert(entry[0].to_owned(), files);
@@ -72,40 +77,47 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
     map_out
 }
 
-pub fn generate_markdown(config: Config, directories: HashMap<String, Vec<PathBuf>>,
-                      entities: HashMap<String, PathBuf>) -> Vec<String> {
+pub fn generate_markdown(
+    config: Config,
+    directories: HashMap<String, Vec<PathBuf>>,
+    entities: HashMap<String, PathBuf>,
+) -> Vec<String> {
     let mut markdown: Vec<String> = Vec::new();
-    let temp: Vec<&str> = vec!["logo", "title", "notes", "Metadata", "Scripts",
-                                "Pipelines", "Notebooks", "QIIME2 Exports"];
-    let order: Vec<String> = temp.iter().map(|i| i.to_owned().to_owned()).collect();   
-    
+    let mut order: Vec<String> = get_default_order();
+
     if let Some(cfg_order) = config.main.order {
-        let order = cfg_order;
-    } 
-    
-    // TODO: ensure no duplicates in order container
-    for item in order.iter() {
-        // special cases
-        if item == "logo" {
-            let logo = entities.get("logo").unwrap_or_else(|| {
-                panic!("No 'logo' key in entities, utils::generate_markdown()");
-            });
-
-            write_logo(&mut markdown, &logo);
-        }
-
-        if item == "title" {
-            if let Some(title) = config.main.title.to_owned() {
-                markdown.push(format!("# {}\n\n", title));
-            } else {
-                markdown.push("Title\n\n".to_owned())
-            }
-        }
-
+        order = cfg_order;
     }
-    
+
+    let mut title: String = "Title".to_owned();
+
+    if let Some(cfg_title) = config.main.title {
+        title = cfg_title;
+    }
+
+    let mut notes: bool = true;
+
+    if let Some(cfg_notes) = config.main.notes {
+        notes = cfg_notes;
+    }
+
+    let extension_map: HashMap<String, String> = get_ext_map();
+    // TODO: ensure no duplicates in order container
+
+    for item in order.iter() {
+        match item.as_str() {
+            "logo" => write_logo(&mut markdown, &entities),
+            "title" => write_title(&mut markdown, &title),
+            "notes" => write_notes(&mut markdown, &notes),
+            "Metadata" => write_metadata(&mut markdown, &entities),
+            "Scripts" => write_directory(&mut markdown, &directories, &extension_map, "Scripts"),
+            "Pipelines" => write_directory(&mut markdown, &directories, &extension_map, "Pipelines"),
+            
+            &_ => panic!("unknown case"),
+        }
+    }
+
     markdown
-    
 }
 
 /*
@@ -115,28 +127,99 @@ pub fn generate_markdown(config: Config, directories: HashMap<String, Vec<PathBu
         panic!("Could not create output file: {}", why);
     });
     let mut out_file = LineWriter::new(out_file);
-    
+
     if let Some(
 
 }*/
-pub fn write_logo(markdown: &mut Vec<String>, logo: &PathBuf) {
+pub fn write_directory(
+    markdown: &mut Vec<String>,
+    directories: &HashMap<String, Vec<PathBuf>>,
+    extension_map: &HashMap<String, String>,
+    title: &str,
+) {
+    let paths = directories
+        .get(title)
+        .unwrap_or_else(|| panic!("No '{}' key in directories"));
+
+    markdown.push(format!("## {}\n\nFile | Notes\n--- | ---\n", title));
+    for path in paths.iter() {
+        let name = path.file_name().unwrap_or_else(|| {
+            panic!(
+                "Error with file_name() call in utils::write_directory() for {:?}",
+                path
+            )
+        });
+
+        let new_path = file_to_markdown(&path, extension_map);
+        markdown.push(format!(
+            "[{}]({}) | Description\n",
+            name.to_str().unwrap(),
+            new_path.to_str().unwrap()
+        ));
+    }
+}
+
+pub fn write_notes(markdown: &mut Vec<String>, notes: &bool) {
+    if notes.to_owned() {
+        markdown.push("## Notes\n* This is a note\n\n".to_owned());
+    }
+}
+
+pub fn write_title(markdown: &mut Vec<String>, title: &String) {
+    markdown.push(format!("# {}\n\n", title));
+}
+
+pub fn write_metadata(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>) {
+    let metadata = entities.get("metadata").unwrap_or_else(|| {
+        panic!("No 'metadata' key in entities, utils::write_metadata()");
+    });
+
+    let metadata_path = metadata.to_str().unwrap();
+    markdown.push(format!(
+        "## Metadata\n[This]({}) is the metadata that was used",
+        metadata_path
+    ));
+}
+
+pub fn write_logo(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>) {
+    let logo = entities.get("logo").unwrap_or_else(|| {
+        panic!("No 'logo' key in entities, utils::generate_markdown()");
+    });
+
     let logo_path = logo.to_str().unwrap();
-    markdown.push(format!("<p align='center'>\n\t<img src='{}'/>\n</p>\n\n", logo_path));
+    markdown.push(format!(
+        "<p align='center'>\n\t<img src='{}'/>\n</p>\n\n",
+        logo_path
+    ));
+}
+
+pub fn get_default_order() -> Vec<String> {
+    let temp: Vec<&str> = vec![
+        "logo",
+        "title",
+        "notes",
+        "Metadata",
+        "Scripts",
+        "Pipelines",
+        "Notebooks",
+        "QIIME2 Exports",
+    ];
+    temp.iter().map(|i| i.to_owned().to_owned()).collect()
 }
 
 /*
-    if let Some(title) = config.main.title {
-        //markdown.push(format!("# {}\n\n", title));
-    }
+if let Some(title) = config.main.title {
+    //markdown.push(format!("# {}\n\n", title));
+}
 
-    let mut notes_section: bool = false;
-    if let Some(notes) = config.main.notes {
-        if notes {
-            notes_section = true;
-            //markdown.push("## Notes\n* This is a note\n\n".to_owned());
-        }
+let mut notes_section: bool = false;
+if let Some(notes) = config.main.notes {
+    if notes {
+        notes_section = true;
+        //markdown.push("## Notes\n* This is a note\n\n".to_owned());
     }
-    */
+}
+*/
 /*
     if let Some(metadata) = config.main.metadata {
         //markdown.push(format!(
@@ -179,7 +262,7 @@ pub fn write_logo(markdown: &mut Vec<String>, logo: &PathBuf) {
         //TODO: this should be elsewhere, ... or?
         let rmd = "Rmd".to_owned();
         let ipynb = "ipynb".to_owned();
-        
+
         let notebook_exts = vec![&rmd, &ipynb];
 
         let notebook_paths = find(&PathBuf::from(&notebooks), &notebook_exts);
