@@ -36,8 +36,6 @@ pub fn init(config: Config) {
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
-    //let mut map_out = HashMap::new();
-
     // maybe need to add title and logo here since they are valid entities
     for entity in entities.iter() {
         if entity.len() != 2 {
@@ -50,8 +48,6 @@ pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<St
 
         entities_map.insert(entity[0].to_owned(), PathBuf::from(entity[1].to_owned()));
     }
-
-    //map_out
 }
 
 pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<PathBuf>> {
@@ -105,22 +101,24 @@ pub fn generate_markdown(
     }
 
     let extension_map: HashMap<String, String> = get_ext_map();
+    
     // TODO: ensure no duplicates in order container
 
     for item in order.iter() {
         match item.as_str() {
+            // Special cases
             "logo" => write_logo(&mut markdown, &entities),
             "title" => write_title(&mut markdown, &title),
             "notes" => write_notes(&mut markdown, &notes),
             "Metadata" => write_metadata(&mut markdown, &entities),
-            // probably don't need any of this logic, just use the any case logic
-            "Scripts" => write_directory(&mut markdown, &directories, &extension_map, item),
-            "Pipelines" => write_directory(&mut markdown, &directories, &extension_map, item),
-            "Notebooks" => write_directory(&mut markdown, &directories, &extension_map, item),
-            "QIIME2 Exports" => write_directory(&mut markdown, &directories, &extension_map, item),
+            
+            // All other cases: either file or directory
             &_ => {
-                // use logic to determine what to do, for testing: write dir
-                write_directory(&mut markdown, &directories, &extension_map, item)
+                if directories.contains_key(item) {
+                    write_directory(&mut markdown, &directories, &extension_map, item);
+                } else if entities.contains_key(item) {
+                    write_entity(&mut markdown, &entities, item);
+                }
             }
         }
     }
@@ -146,13 +144,13 @@ pub fn write_directory(
     markdown: &mut Vec<String>,
     directories: &HashMap<String, Vec<PathBuf>>,
     extension_map: &HashMap<String, String>,
-    title: &str,
+    label: &str,
 ) {
     let paths = directories
-        .get(title)
+        .get(label)
         .unwrap_or_else(|| panic!("No '{}' key in directories"));
 
-    markdown.push(format!("## {}\n\nFile | Notes\n--- | ---\n", title));
+    markdown.push(format!("## {}\n\nFile | Notes\n--- | ---\n", label));
     for path in paths.iter() {
         let name = path.file_name().unwrap_or_else(|| {
             panic!(
@@ -162,15 +160,39 @@ pub fn write_directory(
         });
 
         let new_path = file_to_markdown(&path, extension_map);
-        println!("new_path: {}", new_path.to_str().unwrap());
+        
         markdown.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
             new_path
                 .to_str()
-                .unwrap_or_else(|| { panic!("utils::write_directory, new_path is None") })
+                .unwrap()
         ));
     }
+}
+
+pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>,
+                    label: &str) {
+    let item = entities.get(label).unwrap_or_else(|| {
+        panic!("No '{}' key in entities, utils::write_entity()", label);
+    });
+
+    // NOTE: currently no conversion to markdown, need to think
+    // about how logic to do this could be incorporated
+    let file_path = item.to_str().unwrap();
+    let file_name = item.file_name().unwrap_or_else(|| {
+            panic!(
+                "Error with file_name() call in utils::write_directory() for {:?}",
+                file_path
+            )
+        });
+
+    markdown.push(format!(
+        "## {}\n[{}]({}) is the metadata that was used",
+        label,
+        file_name.to_str().unwrap(),
+        file_path
+    ));
 }
 
 pub fn write_notes(markdown: &mut Vec<String>, notes: &bool) {
