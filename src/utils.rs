@@ -29,9 +29,9 @@ pub fn init(config: Config) {
     if let Some(entities) = config.main.entities.to_owned() {
         entity_handler(&entities, &mut entities_map);
     }
-    
+
     let markdown: Vec<String> = generate_markdown(config, &directories_map, &entities_map);
-    
+
     write_output(&markdown, &PathBuf::from("index.md"));
 }
 
@@ -115,19 +115,13 @@ pub fn generate_markdown(
             "Metadata" => write_metadata(&mut markdown, &entities),
             // probably don't need any of this logic, just use the any case logic
             "Scripts" => write_directory(&mut markdown, &directories, &extension_map, item),
-            "Pipelines" => {
-                write_directory(&mut markdown, &directories, &extension_map, item)
-            }
-            "Notebooks" => {
-                write_directory(&mut markdown, &directories, &extension_map, item)
-            }
-            "QIIME2 Exports" => {
-                write_directory(&mut markdown, &directories, &extension_map, item)
-            }
+            "Pipelines" => write_directory(&mut markdown, &directories, &extension_map, item),
+            "Notebooks" => write_directory(&mut markdown, &directories, &extension_map, item),
+            "QIIME2 Exports" => write_directory(&mut markdown, &directories, &extension_map, item),
             &_ => {
                 // use logic to determine what to do, for testing: write dir
                 write_directory(&mut markdown, &directories, &extension_map, item)
-            },
+            }
         }
     }
 
@@ -138,7 +132,7 @@ pub fn write_output(markdown: &Vec<String>, out_path: &PathBuf) {
     let mut out_buffer = File::create(&out_path).unwrap_or_else(|why| {
         panic!("Could not create output file: {}", why);
     });
-    
+
     for item in markdown.iter() {
         out_buffer.write(item.as_bytes()).unwrap_or_else(|why| {
             panic!("utils::write_output, out_buffer could not write: {}", why);
@@ -172,9 +166,9 @@ pub fn write_directory(
         markdown.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
-            new_path.to_str().unwrap_or_else(|| {
-                panic!("utils::write_directory, new_path is None")
-            })
+            new_path
+                .to_str()
+                .unwrap_or_else(|| { panic!("utils::write_directory, new_path is None") })
         ));
     }
 }
@@ -226,100 +220,6 @@ pub fn get_default_order() -> Vec<String> {
     ];
     temp.iter().map(|i| i.to_owned().to_owned()).collect()
 }
-
-/*
-if let Some(title) = config.main.title {
-    //markdown.push(format!("# {}\n\n", title));
-}
-
-let mut notes_section: bool = false;
-if let Some(notes) = config.main.notes {
-    if notes {
-        notes_section = true;
-        //markdown.push("## Notes\n* This is a note\n\n".to_owned());
-    }
-}
-*/
-/*
-    if let Some(metadata) = config.main.metadata {
-        //markdown.push(format!(
-        //    "[This]({}) is the metadata that was used",
-        //    metadata
-        //));
-    }
-
-    if let Some(scripts) = config.main.scripts {
-        // TODO: extensions need to be specified as user input
-        let temp_ext_0 = "slurm".to_owned();
-        let exts_seq_analysis = vec![&temp_ext_0];
-
-        let slurm_scripts = find(&PathBuf::from(&scripts), &exts_seq_analysis);
-        if slurm_scripts.len() > 0 {
-            markdown.push("## Sequence Analysis Pipelines\n\n".to_owned());
-            markdown.push("File | Notes\n--- | ---\n".to_owned());
-            for script_path in slurm_scripts.iter() {
-                let name = script_path.file_name().unwrap_or_else(|| {
-                    panic!(
-                        "Error with file_name() call in config::builder() for {:?}",
-                        script_path
-                    )
-                });
-
-                let new_path = file_to_markdown(&script_path, &extension_map);
-                markdown.push(format!(
-                    "[{}]({}) | \n",
-                    name.to_str().unwrap(),
-                    new_path.to_str().unwrap()
-                ));
-            }
-        }
-    }
-
-    if let Some(notebooks) = config.main.notebooks {
-        // jupyter notebooks: jupyter nbconvert --to html x.ipynb
-        // r notebooks: Rscript -e "rmarkdown::render('fp.Rmd')"
-        // need header checks on R notebooks
-        //TODO: this should be elsewhere, ... or?
-        let rmd = "Rmd".to_owned();
-        let ipynb = "ipynb".to_owned();
-
-        let notebook_exts = vec![&rmd, &ipynb];
-
-        let notebook_paths = find(&PathBuf::from(&notebooks), &notebook_exts);
-        if notebook_paths.len() > 0 {
-            // TODO: all these titles could be specified, realistically
-            markdown.push("## Notebooks\n\n".to_owned());
-            markdown.push("File | Notes\n--- | ---\n".to_owned());
-            for notebook_path in notebook_paths.iter() {
-                let name = notebook_path.file_name().unwrap_or_else(|| {
-                    panic!(
-                        "Error with file_name() call in config::builder() for {:?}",
-                        notebook_path
-                    )
-                });
-
-                let new_path = file_to_markdown(&notebook_path, &extension_map);
-                markdown.push(format!(
-                    "[{}]({}) | \n",
-                    name.to_str().unwrap(),
-                    new_path.to_str().unwrap()
-                ));
-            }
-        }
-    }
-
-    //if let Some()
-    // get list of sections, create map
-    // default sections: [title, intro, notes, metadata, utility scripts, pipelines,
-    // notebooks, qiime2 reports, qiime2 raw data]
-    // pull this from default config, so
-    // get default config
-    //
-    // get data for each section
-    //
-    // pretty output
-*/
-//}
 
 // expected behavior: gnu find, right?
 pub fn find(parent_dir: &PathBuf, target_extensions: &[&String]) -> Vec<PathBuf> {
