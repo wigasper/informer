@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::LineWriter;
 use std::path::PathBuf;
 
 use mditty::utils::*;
@@ -19,19 +18,21 @@ pub fn init(config: Config) {
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
 
-    if let Some(logo) = config.main.logo {
+    if let Some(logo) = config.main.logo.to_owned() {
         entities_map.insert("logo".to_owned(), PathBuf::from(logo));
     }
 
-    if let Some(directories) = config.main.directories {
+    if let Some(directories) = config.main.directories.to_owned() {
         directories_map = directory_handler(&directories);
     }
 
-    if let Some(entities) = config.main.entities {
+    if let Some(entities) = config.main.entities.to_owned() {
         entity_handler(&entities, &mut entities_map);
     }
-
-    //write_markdown();
+    
+    let markdown: Vec<String> = generate_markdown(config, &directories_map, &entities_map);
+    
+    write_output(&markdown, &PathBuf::from("index.md"));
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
@@ -55,9 +56,11 @@ pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<St
 
 pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<PathBuf>> {
     let mut map_out = HashMap::new();
-    
+
     // could borrow this from init
     let extension_map = mditty::utils::get_ext_map();
+    // Need to deal with special cases, i.e. Q2 exports directories should only
+    // get HTML
     let extensions: Vec<&String> = extension_map.keys().collect();
 
     for entry in directories.iter() {
@@ -79,8 +82,8 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
 
 pub fn generate_markdown(
     config: Config,
-    directories: HashMap<String, Vec<PathBuf>>,
-    entities: HashMap<String, PathBuf>,
+    directories: &HashMap<String, Vec<PathBuf>>,
+    entities: &HashMap<String, PathBuf>,
 ) -> Vec<String> {
     let mut markdown: Vec<String> = Vec::new();
     let mut order: Vec<String> = get_default_order();
@@ -110,27 +113,41 @@ pub fn generate_markdown(
             "title" => write_title(&mut markdown, &title),
             "notes" => write_notes(&mut markdown, &notes),
             "Metadata" => write_metadata(&mut markdown, &entities),
-            "Scripts" => write_directory(&mut markdown, &directories, &extension_map, "Scripts"),
-            "Pipelines" => write_directory(&mut markdown, &directories, &extension_map, "Pipelines"),
-            
-            &_ => panic!("unknown case"),
+            // probably don't need any of this logic, just use the any case logic
+            "Scripts" => write_directory(&mut markdown, &directories, &extension_map, item),
+            "Pipelines" => {
+                write_directory(&mut markdown, &directories, &extension_map, item)
+            }
+            "Notebooks" => {
+                write_directory(&mut markdown, &directories, &extension_map, item)
+            }
+            "QIIME2 Exports" => {
+                write_directory(&mut markdown, &directories, &extension_map, item)
+            }
+            &_ => {
+                // use logic to determine what to do, for testing: write dir
+                write_directory(&mut markdown, &directories, &extension_map, item)
+            },
         }
     }
 
     markdown
 }
 
-/*
-    let out_path = PathBuf::from("index.md");
-
-    let out_file = File::create(&output_path).unwrap_or_else(|why| {
+pub fn write_output(markdown: &Vec<String>, out_path: &PathBuf) {
+    let mut out_buffer = File::create(&out_path).unwrap_or_else(|why| {
         panic!("Could not create output file: {}", why);
     });
-    let mut out_file = LineWriter::new(out_file);
+    
+    for item in markdown.iter() {
+        out_buffer.write(item.as_bytes()).unwrap_or_else(|why| {
+            panic!("utils::write_output, out_buffer could not write: {}", why);
+        });
+    }
 
-    if let Some(
+    out_buffer.flush().unwrap();
+}
 
-}*/
 pub fn write_directory(
     markdown: &mut Vec<String>,
     directories: &HashMap<String, Vec<PathBuf>>,
@@ -151,10 +168,13 @@ pub fn write_directory(
         });
 
         let new_path = file_to_markdown(&path, extension_map);
+        println!("new_path: {}", new_path.to_str().unwrap());
         markdown.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
-            new_path.to_str().unwrap()
+            new_path.to_str().unwrap_or_else(|| {
+                panic!("utils::write_directory, new_path is None")
+            })
         ));
     }
 }

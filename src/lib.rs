@@ -23,7 +23,7 @@ mod tests {
     #[test]
     fn get_default_config_0() {
         let cfg = get_default_config();
-        
+
         println!("{:?}", cfg.main.directories);
         assert_eq!(cfg.main.title, Some("Title placeholder".to_owned()));
         assert_eq!(cfg.main.notes, Some(true));
@@ -41,4 +41,28 @@ mod tests {
 
         assert_eq!(its, expected);
     }
+/*
+    #[test]
+    fn test_run() {
+        let config: Config = toml::from_str(
+            r#"
+            [main]
+            title = 'Tester'
+            notes = true
+
+            directories = [
+                ['Source', './src']
+            ]
+
+            order = [
+                'title',
+                'notes',
+                'Source'
+            ]
+            "#
+            ).unwrap();
+
+        init(config);
+
+    }*/
 }

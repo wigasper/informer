@@ -62,7 +62,9 @@ pub fn get_default_config() -> Config {
     ]
 
     
-    "#,).unwrap();
+    "#,
+    )
+    .unwrap();
 
     config
 }
