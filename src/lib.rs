@@ -7,7 +7,7 @@ mod tests {
 
     use crate::config::*;
     use crate::utils::*;
-    //extern crate mditty;
+
     use mditty::utils::get_file_extension;
 
     #[test]
@@ -35,13 +35,44 @@ mod tests {
 
         let expected = vec![
             PathBuf::from("./src/config.rs"),
+            PathBuf::from("./src/main.rs"),
             PathBuf::from("./src/utils.rs"),
             PathBuf::from("./src/lib.rs"),
         ];
 
         assert_eq!(its, expected);
     }
-/*
+
+    #[test]
+
+    fn load_config_0() {
+        let cfg = load_config(&PathBuf::from("sample_config.toml"));
+        assert_eq!(cfg.main.title, Some("Title placeholder".to_owned()));
+        assert_eq!(cfg.main.notes, Some(true));
+    }
+
+    #[test]
+    fn dedup_respectfully_0() {
+        let temp = vec!["this", "is", "this", "is", "a", "test", "is"];
+        let this_vec: Vec<String> = temp.iter().map(|i| i.to_owned().to_owned()).collect();
+
+        let temp_e = vec!["this", "is", "a", "test"];
+        let expected: Vec<String> = temp_e.iter().map(|i| i.to_owned().to_owned()).collect();
+
+        assert_eq!(expected, dedup_respectfully(&this_vec));
+    }
+
+    #[test]
+    fn dedup_respectfully_1() {
+        let temp = vec!["this", "is", "a", "test"];
+        let this_vec: Vec<String> = temp.iter().map(|i| i.to_owned().to_owned()).collect();
+
+        let temp_e = vec!["this", "is", "a", "test"];
+        let expected: Vec<String> = temp_e.iter().map(|i| i.to_owned().to_owned()).collect();
+
+        assert_eq!(expected, dedup_respectfully(&this_vec));
+    }
+    /*
     #[test]
     fn test_run() {
         let config: Config = toml::from_str(
