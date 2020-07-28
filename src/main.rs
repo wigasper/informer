@@ -30,6 +30,8 @@ fn main() {
             Arg::with_name("config")
                 .short("c")
                 .long("config")
+                // TODO: FIX THIS
+                .default_value("")
                 .long_help("Path to a TOML config file, see sample_config.toml for an example"),
         )
         .get_matches();
