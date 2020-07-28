@@ -10,10 +10,7 @@ use crate::config::*;
 // TODO: this needs to be able to update an existing report
 // updates should only affect certain sections
 
-// pandoc probably best at the end, in case
 pub fn init(config: Config) {
-    //let mut output_data: HashMap<String, Vec<String>> = parse_config(config);
-
     // labels for sections are mapped to filepaths that will be in those sections
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
@@ -36,7 +33,6 @@ pub fn init(config: Config) {
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
-    // maybe need to add title and logo here since they are valid entities
     for entity in entities.iter() {
         if entity.len() != 2 {
             panic!(
@@ -85,7 +81,7 @@ pub fn generate_markdown(
     let mut order: Vec<String> = get_default_order();
 
     if let Some(cfg_order) = config.main.order {
-        order = cfg_order;
+        order = dedup_respectfully(&cfg_order);
     }
 
     let mut title: String = "Title".to_owned();
@@ -101,8 +97,6 @@ pub fn generate_markdown(
     }
 
     let extension_map: HashMap<String, String> = get_ext_map();
-    
-    // TODO: ensure no duplicates in order container
 
     for item in order.iter() {
         match item.as_str() {
@@ -111,7 +105,7 @@ pub fn generate_markdown(
             "title" => write_title(&mut markdown, &title),
             "notes" => write_notes(&mut markdown, &notes),
             "Metadata" => write_metadata(&mut markdown, &entities),
-            
+
             // All other cases: either file or directory
             &_ => {
                 if directories.contains_key(item) {
@@ -160,19 +154,16 @@ pub fn write_directory(
         });
 
         let new_path = file_to_markdown(&path, extension_map);
-        
+
         markdown.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
-            new_path
-                .to_str()
-                .unwrap()
+            new_path.to_str().unwrap()
         ));
     }
 }
 
-pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>,
-                    label: &str) {
+pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>, label: &str) {
     let item = entities.get(label).unwrap_or_else(|| {
         panic!("No '{}' key in entities, utils::write_entity()", label);
     });
@@ -181,11 +172,11 @@ pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathB
     // about how logic to do this could be incorporated
     let file_path = item.to_str().unwrap();
     let file_name = item.file_name().unwrap_or_else(|| {
-            panic!(
-                "Error with file_name() call in utils::write_directory() for {:?}",
-                file_path
-            )
-        });
+        panic!(
+            "Error with file_name() call in utils::write_directory() for {:?}",
+            file_path
+        )
+    });
 
     markdown.push(format!(
         "## {}\n[{}]({}) is the metadata that was used",
@@ -241,6 +232,19 @@ pub fn get_default_order() -> Vec<String> {
         "QIIME2 Exports",
     ];
     temp.iter().map(|i| i.to_owned().to_owned()).collect()
+}
+
+// greedily dedups with (greedy) respect for original order
+pub fn dedup_respectfully(slice_in: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+
+    for item in slice_in.iter() {
+        if !out.contains(item) {
+            out.push(item.to_owned());
+        }
+    }
+
+    out
 }
 
 // expected behavior: gnu find, right?
