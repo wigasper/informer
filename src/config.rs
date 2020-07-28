@@ -5,7 +5,7 @@ use serde::Deserialize;
 use toml::from_str;
 
 // TODO: bools should probably be Strings that are then parsed to allow for
-// different options
+// fuzzy language usage
 #[derive(Deserialize)]
 pub struct MainCfg {
     pub title: Option<String>,
@@ -13,11 +13,6 @@ pub struct MainCfg {
     pub notes: Option<bool>,
     pub entities: Option<Vec<Vec<String>>>,
     pub directories: Option<Vec<Vec<String>>>,
-    //pub metadata: Option<String>,
-    //pub pipelines: Option<String>,
-    //pub scripts: Option<String>,
-    //pub q2exports: Option<String>,
-    //pub notebooks: Option<String>,
     pub order: Option<Vec<String>>,
 }
 
