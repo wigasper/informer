@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::path::PathBuf;
+use std::process::Command;
 
 use mditty::utils::*;
 
@@ -11,6 +12,9 @@ use crate::config::*;
 // updates should only affect certain sections
 
 pub fn init(config: Config) {
+    // not sure about how to handle output format yet, just using this for now
+    let out_fmt = OutputFormat::HTML;
+
     // labels for sections are mapped to filepaths that will be in those sections
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
@@ -30,9 +34,11 @@ pub fn init(config: Config) {
     let markdown: Vec<String> = generate_markdown(config, &directories_map, &entities_map);
 
     write_output(&markdown, &PathBuf::from("index.md"));
+    to_html(&PathBuf::from("index.md"));
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
+    // TODO: logic for entity -> md -> html when warranted
     for entity in entities.iter() {
         if entity.len() != 2 {
             panic!(
@@ -51,8 +57,7 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
 
     // could borrow this from init
     let extension_map = mditty::utils::get_ext_map();
-    // Need to deal with special cases, i.e. Q2 exports directories should only
-    // get HTML
+
     let extensions: Vec<&String> = extension_map.keys().collect();
 
     for entry in directories.iter() {
@@ -64,12 +69,70 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
             );
         }
 
-        let files = find(&PathBuf::from(entry[1].to_owned()), &extensions);
+        let mut files: Vec<PathBuf> = Vec::new();
+        // Special case: Q2 exports
+        if entry[0] == "QIIME2 Exports" {
+            files = find(&PathBuf::from(entry[1].to_owned()), &[&"html".to_owned()]);
+        } else {
+            let temp_files: Vec<PathBuf> = find(&PathBuf::from(entry[1].to_owned()), &extensions);
+
+            for file in temp_files.iter() {
+                let md_path = file_to_markdown(file, &extension_map);
+                let html_path: PathBuf = to_html(&md_path).unwrap_or_else(|| {
+                    panic!(
+                        "pandoc MD to HTML call failed for {}",
+                        file.to_str().unwrap()
+                    )
+                });
+                files.push(html_path);
+            }
+        }
 
         map_out.insert(entry[0].to_owned(), files);
     }
 
     map_out
+}
+
+pub fn to_html(md_path: &PathBuf) -> Option<PathBuf> {
+    if get_file_extension(md_path) != "md" {
+        panic!("utils::to_html: can only accept files with 'md' extension");
+    }
+
+    let mut output: Option<PathBuf> = None;
+
+    if pandoc_installed() {
+        let mut out_path = md_path.to_owned();
+        let _: bool = out_path.set_extension("html");
+        println!("md_path: {}", md_path.to_str().unwrap());
+        let call = Command::new("pandoc")
+            .arg("-f")
+            .arg("gfm")
+            .arg("-t")
+            .arg("html")
+            .arg("-s")
+            .arg("-o")
+            .arg(&out_path)
+            .arg(md_path)
+            .status()
+            .expect("pandoc failure");
+
+        // TODO: need some additional catches here in case of pandoc problems
+        if call.success() {
+            output = Some(out_path)
+        }
+    }
+
+    output
+}
+
+pub fn pandoc_installed() -> bool {
+    let status = Command::new("pandoc")
+        .arg("-v")
+        .status()
+        .expect("utils::check_for_pandoc: Command::new failed");
+
+    status.success()
 }
 
 pub fn generate_markdown(
@@ -153,12 +216,12 @@ pub fn write_directory(
             )
         });
 
-        let new_path = file_to_markdown(&path, extension_map);
+        //let new_path = file_to_markdown(&path, extension_map);
 
         markdown.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
-            new_path.to_str().unwrap()
+            path.to_str().unwrap()
         ));
     }
 }
@@ -179,7 +242,7 @@ pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathB
     });
 
     markdown.push(format!(
-        "## {}\n[{}]({}) is the metadata that was used",
+        "## {}\n[{}]({}) is the metadata that was used\n",
         label,
         file_name.to_str().unwrap(),
         file_path
@@ -197,7 +260,7 @@ pub fn write_title(markdown: &mut Vec<String>, title: &String) {
 }
 
 pub fn write_metadata(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>) {
-    let metadata = entities.get("metadata").unwrap_or_else(|| {
+    let metadata = entities.get("Metadata").unwrap_or_else(|| {
         panic!("No 'metadata' key in entities, utils::write_metadata()");
     });
 
@@ -257,6 +320,7 @@ pub fn find(parent_dir: &PathBuf, target_extensions: &[&String]) -> Vec<PathBuf>
 
         for entry in current_dir.read_dir().expect("read_dir call failure") {
             if let Ok(entry) = entry {
+                // TODO: ignore hidden
                 let entry_path = entry.path();
 
                 if entry_path.is_file() {
