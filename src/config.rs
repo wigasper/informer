@@ -1,12 +1,16 @@
 extern crate toml;
 
 use serde::Deserialize;
-use std::path::PathBuf;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 use toml::from_str;
 
+pub enum OutputFormat {
+    HTML,
+    Markdown,
+}
 // TODO: bools should probably be Strings that are then parsed to allow for
 // fuzzy language usage
 #[derive(Deserialize)]
@@ -26,14 +30,22 @@ pub struct Config {
 
 pub fn load_config(file_path: &PathBuf) -> Config {
     let mut file = File::open(file_path.as_path()).unwrap_or_else(|why| {
-        panic!("Could not open config file: {}, why: {}", file_path.to_str().unwrap(), why);
+        panic!(
+            "Could not open config file: {}, why: {}",
+            file_path.to_str().unwrap(),
+            why
+        );
     });
     let mut contents = String::new();
 
     file.read_to_string(&mut contents).unwrap_or_else(|why| {
-        panic!("Could not read config file: {}, why: {}", file_path.to_str().unwrap(), why);
+        panic!(
+            "Could not read config file: {}, why: {}",
+            file_path.to_str().unwrap(),
+            why
+        );
     });
-    
+
     toml::from_str(contents.as_str()).unwrap()
 }
 
