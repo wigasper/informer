@@ -41,6 +41,9 @@ mod tests {
             PathBuf::from("./src/lib.rs"),
         ];
 
+        its.sort();
+        expected.sort();
+
         assert_eq!(its, expected);
     }
 
