@@ -4,11 +4,10 @@ pub mod utils;
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+    use std::process::Command;
 
     use crate::config::*;
     use crate::utils::*;
-
-    use mditty::utils::get_file_extension;
 
     #[test]
     fn it_works() {
@@ -16,8 +15,10 @@ mod tests {
     }
 
     #[test]
-    fn test_using_mditty() {
-        assert_eq!(get_file_extension(&PathBuf::from("test.rs")), "rs");
+    fn test_pandoc_to_html() {
+        let out = md_to_html(&PathBuf::from("./test/test.md"));
+        println!("{:?}", out);
+        assert_eq!(out, Some(PathBuf::from("./test/test.html")));
     }
 
     #[test]
@@ -44,7 +45,6 @@ mod tests {
     }
 
     #[test]
-
     fn load_config_0() {
         let cfg = load_config(&PathBuf::from("sample_config.toml"));
         assert_eq!(cfg.main.title, Some("Title placeholder".to_owned()));
@@ -72,28 +72,4 @@ mod tests {
 
         assert_eq!(expected, dedup_respectfully(&this_vec));
     }
-    /*
-    #[test]
-    fn test_run() {
-        let config: Config = toml::from_str(
-            r#"
-            [main]
-            title = 'Tester'
-            notes = true
-
-            directories = [
-                ['Source', './src']
-            ]
-
-            order = [
-                'title',
-                'notes',
-                'Source'
-            ]
-            "#
-            ).unwrap();
-
-        init(config);
-
-    }*/
 }
