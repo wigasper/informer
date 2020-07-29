@@ -1,4 +1,4 @@
-![](https://github.com/wigasper/informer/workflows/Continuous&20Integration/badge.svg)
+![](https://github.com/wigasper/informer/workflows/build/badge.svg)
 
 # informer
 
