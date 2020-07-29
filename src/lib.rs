@@ -32,9 +32,9 @@ mod tests {
 
     #[test]
     fn find_0() {
-        let its = find(&PathBuf::from("."), &[&"rs".to_owned()]);
+        let mut its = find(&PathBuf::from("."), &[&"rs".to_owned()]);
 
-        let expected = vec![
+        let mut expected = vec![
             PathBuf::from("./src/config.rs"),
             PathBuf::from("./src/main.rs"),
             PathBuf::from("./src/utils.rs"),
