@@ -34,7 +34,7 @@ pub fn init(config: Config) {
     let markdown: Vec<String> = generate_markdown(config, &directories_map, &entities_map);
 
     write_output(&markdown, &PathBuf::from("index.md"));
-    to_html(&PathBuf::from("index.md"));
+    md_to_html(&PathBuf::from("index.md"));
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
@@ -78,7 +78,7 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
 
             for file in temp_files.iter() {
                 let md_path = file_to_markdown(file, &extension_map);
-                let html_path: PathBuf = to_html(&md_path).unwrap_or_else(|| {
+                let html_path: PathBuf = md_to_html(&md_path).unwrap_or_else(|| {
                     panic!(
                         "pandoc MD to HTML call failed for {}",
                         file.to_str().unwrap()
@@ -94,7 +94,7 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
     map_out
 }
 
-pub fn to_html(md_path: &PathBuf) -> Option<PathBuf> {
+pub fn md_to_html(md_path: &PathBuf) -> Option<PathBuf> {
     if get_file_extension(md_path) != "md" {
         panic!("utils::to_html: can only accept files with 'md' extension");
     }
@@ -104,7 +104,7 @@ pub fn to_html(md_path: &PathBuf) -> Option<PathBuf> {
     if pandoc_installed() {
         let mut out_path = md_path.to_owned();
         let _: bool = out_path.set_extension("html");
-        println!("md_path: {}", md_path.to_str().unwrap());
+
         let call = Command::new("pandoc")
             .arg("-f")
             .arg("gfm")
