@@ -141,11 +141,6 @@ pub fn generate_markdown(
     entities: &HashMap<String, PathBuf>,
 ) -> Vec<String> {
     let mut markdown: Vec<String> = Vec::new();
-    let mut order: Vec<String> = get_default_order();
-
-    if let Some(cfg_order) = config.main.order {
-        order = dedup_respectfully(&cfg_order);
-    }
 
     let mut title: String = "Title".to_owned();
 
@@ -157,6 +152,12 @@ pub fn generate_markdown(
 
     if let Some(cfg_notes) = config.main.notes {
         notes = cfg_notes;
+    }
+
+    let mut order: Vec<String> = get_default_order(&directories, &entities, &notes);
+
+    if let Some(cfg_order) = config.main.order {
+        order = dedup_respectfully(&cfg_order);
     }
 
     let extension_map: HashMap<String, String> = get_ext_map();
@@ -283,18 +284,39 @@ pub fn write_logo(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf
     ));
 }
 
-pub fn get_default_order() -> Vec<String> {
-    let temp: Vec<&str> = vec![
-        "logo",
-        "title",
-        "notes",
-        "Metadata",
-        "Scripts",
-        "Pipelines",
-        "Notebooks",
-        "QIIME2 Exports",
-    ];
-    temp.iter().map(|i| i.to_owned().to_owned()).collect()
+pub fn get_default_order(
+    directories: &HashMap<String, Vec<PathBuf>>,
+    entities: &HashMap<String, PathBuf>,
+    notes: &bool,
+) -> Vec<String> {
+    let mut order: Vec<String> = Vec::new();
+
+    if entities.contains_key("logo") {
+        order.push("logo".to_owned());
+    }
+
+    // NOTE: this is based on the logic in generate_markdown where a title
+    // will be present no matter what
+    order.push("title".to_owned());
+
+    if *notes {
+        order.push("notes".to_owned());
+    }
+
+    let mut remaining_sections: Vec<String> = directories.keys().map(|k| k.to_owned()).collect();
+    remaining_sections.extend(
+        entities
+            .keys()
+            .filter(|k| k != &&"logo".to_owned())
+            .map(|k| k.to_owned())
+            .collect::<Vec<String>>(),
+    );
+
+    remaining_sections.sort();
+
+    order.extend(remaining_sections);
+
+    order
 }
 
 // greedily dedups with (greedy) respect for original order

@@ -3,16 +3,12 @@ pub mod utils;
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::path::PathBuf;
     use std::process::Command;
 
     use crate::config::*;
     use crate::utils::*;
-
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
 
     #[test]
     fn test_pandoc_to_html() {
@@ -74,5 +70,25 @@ mod tests {
         let expected: Vec<String> = temp_e.iter().map(|i| i.to_owned().to_owned()).collect();
 
         assert_eq!(expected, dedup_respectfully(&this_vec));
+    }
+
+    #[test]
+    fn get_default_order_0() {
+        let mut directories: HashMap<String, Vec<PathBuf>> = HashMap::new();
+        let mut entities: HashMap<String, PathBuf> = HashMap::new();
+        let notes: bool = true;
+
+        directories.insert("b".to_owned(), Vec::new());
+        directories.insert("d".to_owned(), Vec::new());
+        entities.insert("a".to_owned(), PathBuf::new());
+        entities.insert("c".to_owned(), PathBuf::new());
+        entities.insert("logo".to_owned(), PathBuf::new());
+
+        let temp = vec!["logo", "title", "notes", "a", "b", "c", "d"];
+        let expected: Vec<String> = temp.iter().map(|i| i.to_owned().to_owned()).collect();
+
+        let actual = get_default_order(&directories, &entities, &notes);
+
+        assert_eq!(expected, actual);
     }
 }
