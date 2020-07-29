@@ -17,7 +17,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install pandoc
-      run: sudo apt-get install -y -qq pandoc
+      run: |
+        wget https://github.com/jgm/pandoc/releases/download/2.10.1/pandoc-2.10.1-linux-amd64.tar.gz
+        gunzip pandoc-2.10.1-linux-amd64.tar.gz
+        tar -xf pandoc-2.10.1-linux-amd64.tar
+        sudo cp pandoc-2.10.1/bin/pandoc /usr/bin
     - name: Build
       run: cargo build --verbose
     - name: Run tests
