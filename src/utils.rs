@@ -52,7 +52,10 @@ pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<St
     }
 }
 
-pub fn directory_handler(directories: &Vec<Vec<String>>, directories_map: &mut HashMap<String, Vec<PathBuf>>) {
+pub fn directory_handler(
+    directories: &Vec<Vec<String>>,
+    directories_map: &mut HashMap<String, Vec<PathBuf>>,
+) {
     // could borrow this from init
     let extension_map = mditty::utils::get_ext_map();
 
@@ -153,6 +156,8 @@ pub fn generate_markdown(
     let mut order: Vec<String> = get_default_order(&directories, &entities, &notes);
 
     if let Some(cfg_order) = config.main.order {
+        // TODO: validation here, order should probably only contain strings that
+        // match an entity or dir
         order = dedup_respectfully(&cfg_order);
     }
 
@@ -200,11 +205,13 @@ pub fn write_directory(
     extension_map: &HashMap<String, String>,
     label: &str,
 ) {
+    // order items should be validated prior to this step so maybe unwrap_or_else
+    // can just be unwrap
     let paths = directories
         .get(label)
         .unwrap_or_else(|| panic!("No '{}' key in directories"));
 
-    markdown.push(format!("## {}\n\nFile | Notes\n--- | ---\n", label));
+    markdown.push(format!("## {}\n<!--{}-->\n\nFile | Notes\n--- | ---\n", label, label));
     for path in paths.iter() {
         let name = path.file_name().unwrap_or_else(|| {
             panic!(
@@ -221,9 +228,12 @@ pub fn write_directory(
             path.to_str().unwrap()
         ));
     }
+    markdown.push(format!("<!--/{}-->", label));
 }
 
 pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>, label: &str) {
+    // order items should be validated as existing prior to this so that this
+    // unwrap_or_else can be jsut changed to unwrap
     let item = entities.get(label).unwrap_or_else(|| {
         panic!("No '{}' key in entities, utils::write_entity()", label);
     });
@@ -239,7 +249,7 @@ pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathB
     });
 
     markdown.push(format!(
-        "## {}\n[{}]({}) is the metadata that was used\n",
+        "## {}\n[{}]({}) Description\n",
         label,
         file_name.to_str().unwrap(),
         file_path
