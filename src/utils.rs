@@ -24,7 +24,7 @@ pub fn init(config: Config) {
     }
 
     if let Some(directories) = config.main.directories.to_owned() {
-        directories_map = directory_handler(&directories);
+        directory_handler(&directories, &mut directories_map);
     }
 
     if let Some(entities) = config.main.entities.to_owned() {
@@ -52,9 +52,7 @@ pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<St
     }
 }
 
-pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<PathBuf>> {
-    let mut map_out = HashMap::new();
-
+pub fn directory_handler(directories: &Vec<Vec<String>>, directories_map: &mut HashMap<String, Vec<PathBuf>>) {
     // could borrow this from init
     let extension_map = mditty::utils::get_ext_map();
 
@@ -88,10 +86,8 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
             }
         }
 
-        map_out.insert(entry[0].to_owned(), files);
+        directories_map.insert(entry[0].to_owned(), files);
     }
-
-    map_out
 }
 
 pub fn md_to_html(md_path: &PathBuf) -> Option<PathBuf> {
