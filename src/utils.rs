@@ -110,6 +110,7 @@ pub fn md_to_html(md_path: &PathBuf) -> Option<PathBuf> {
             .arg("-t")
             .arg("html")
             .arg("-s")
+            .arg("--quiet")
             .arg("-o")
             .arg(&out_path)
             .arg(md_path)
