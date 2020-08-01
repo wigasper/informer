@@ -211,7 +211,8 @@ pub fn write_directory(
         .get(label)
         .unwrap_or_else(|| panic!("No '{}' key in directories"));
 
-    markdown.push(format!("## {}\n<!--{}-->\n\nFile | Notes\n--- | ---\n", label, label));
+    let mut lines: Vec<String> = Vec::new();
+    lines.push(format!("## {}\n\nFile | Notes\n--- | ---\n", label));
     for path in paths.iter() {
         let name = path.file_name().unwrap_or_else(|| {
             panic!(
@@ -220,15 +221,16 @@ pub fn write_directory(
             )
         });
 
-        //let new_path = file_to_markdown(&path, extension_map);
-
-        markdown.push(format!(
+        lines.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
             path.to_str().unwrap()
         ));
     }
-    markdown.push(format!("<!--/{}-->", label));
+
+    insert_delimiters(&mut lines, label);
+    //markdown.push(format!("<!--/{}-->", label));
+    markdown.extend(lines);
 }
 
 pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>, label: &str) {
@@ -323,6 +325,12 @@ pub fn get_default_order(
     order.extend(remaining_sections);
 
     order
+}
+
+// inserts delimiters for update function later
+pub fn insert_delimiters(lines: &mut Vec<String>, label: &str) {
+    lines.insert(1, format!("<!---{}--->\n", label));
+    lines.push(format!("<!---/{}--->", label));
 }
 
 // greedily dedups with (greedy) respect for original order
