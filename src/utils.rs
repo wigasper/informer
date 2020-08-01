@@ -110,6 +110,7 @@ pub fn md_to_html(md_path: &PathBuf) -> Option<PathBuf> {
             .arg("-t")
             .arg("html")
             .arg("-s")
+            .arg("--quiet")
             .arg("-o")
             .arg(&out_path)
             .arg(md_path)
@@ -212,7 +213,8 @@ pub fn write_directory(
         .unwrap_or_else(|| panic!("No '{}' key in directories"));
 
     let mut lines: Vec<String> = Vec::new();
-    lines.push(format!("## {}\n\nFile | Notes\n--- | ---\n", label));
+    lines.push(format!("## {}\n\n", label));
+    lines.push("File | Notes\n--- | ---\n".to_owned());
     for path in paths.iter() {
         let name = path.file_name().unwrap_or_else(|| {
             panic!(
@@ -275,7 +277,7 @@ pub fn write_metadata(markdown: &mut Vec<String>, entities: &HashMap<String, Pat
 
     let metadata_path = metadata.to_str().unwrap();
     markdown.push(format!(
-        "## Metadata\n[This]({}) is the metadata that was used",
+        "## Metadata\n[This]({}) is the metadata that was used\n",
         metadata_path
     ));
 }
