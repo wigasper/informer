@@ -24,7 +24,7 @@ pub fn init(config: Config) {
     }
 
     if let Some(directories) = config.main.directories.to_owned() {
-        directories_map = directory_handler(&directories);
+        directory_handler(&directories, &mut directories_map);
     }
 
     if let Some(entities) = config.main.entities.to_owned() {
@@ -52,9 +52,10 @@ pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<St
     }
 }
 
-pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<PathBuf>> {
-    let mut map_out = HashMap::new();
-
+pub fn directory_handler(
+    directories: &Vec<Vec<String>>,
+    directories_map: &mut HashMap<String, Vec<PathBuf>>,
+) {
     // could borrow this from init
     let extension_map = mditty::utils::get_ext_map();
 
@@ -88,10 +89,8 @@ pub fn directory_handler(directories: &Vec<Vec<String>>) -> HashMap<String, Vec<
             }
         }
 
-        map_out.insert(entry[0].to_owned(), files);
+        directories_map.insert(entry[0].to_owned(), files);
     }
-
-    map_out
 }
 
 pub fn md_to_html(md_path: &PathBuf) -> Option<PathBuf> {
@@ -157,6 +156,8 @@ pub fn generate_markdown(
     let mut order: Vec<String> = get_default_order(&directories, &entities, &notes);
 
     if let Some(cfg_order) = config.main.order {
+        // TODO: validation here, order should probably only contain strings that
+        // match an entity or dir
         order = dedup_respectfully(&cfg_order);
     }
 
@@ -204,11 +205,14 @@ pub fn write_directory(
     extension_map: &HashMap<String, String>,
     label: &str,
 ) {
+    // order items should be validated prior to this step so maybe unwrap_or_else
+    // can just be unwrap
     let paths = directories
         .get(label)
         .unwrap_or_else(|| panic!("No '{}' key in directories"));
 
-    markdown.push(format!("## {}\n\nFile | Notes\n--- | ---\n", label));
+    let mut lines: Vec<String> = Vec::new();
+    lines.push(format!("## {}\n\nFile | Notes\n--- | ---\n", label));
     for path in paths.iter() {
         let name = path.file_name().unwrap_or_else(|| {
             panic!(
@@ -217,17 +221,21 @@ pub fn write_directory(
             )
         });
 
-        //let new_path = file_to_markdown(&path, extension_map);
-
-        markdown.push(format!(
+        lines.push(format!(
             "[{}]({}) | Description\n",
             name.to_str().unwrap(),
             path.to_str().unwrap()
         ));
     }
+
+    insert_delimiters(&mut lines, label);
+    //markdown.push(format!("<!--/{}-->", label));
+    markdown.extend(lines);
 }
 
 pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathBuf>, label: &str) {
+    // order items should be validated as existing prior to this so that this
+    // unwrap_or_else can be jsut changed to unwrap
     let item = entities.get(label).unwrap_or_else(|| {
         panic!("No '{}' key in entities, utils::write_entity()", label);
     });
@@ -243,7 +251,7 @@ pub fn write_entity(markdown: &mut Vec<String>, entities: &HashMap<String, PathB
     });
 
     markdown.push(format!(
-        "## {}\n[{}]({}) is the metadata that was used\n",
+        "## {}\n[{}]({}) Description\n",
         label,
         file_name.to_str().unwrap(),
         file_path
@@ -317,6 +325,12 @@ pub fn get_default_order(
     order.extend(remaining_sections);
 
     order
+}
+
+// inserts delimiters for update function later
+pub fn insert_delimiters(lines: &mut Vec<String>, label: &str) {
+    lines.insert(1, format!("<!---{}--->\n", label));
+    lines.push(format!("<!---/{}--->", label));
 }
 
 // greedily dedups with (greedy) respect for original order

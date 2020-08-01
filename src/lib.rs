@@ -91,4 +91,21 @@ mod tests {
 
         assert_eq!(expected, actual);
     }
+
+    #[test]
+    fn insert_delimiters_0() {
+        let temp_lines = vec!["hello", "this", "is"];
+        let mut lines = temp_lines.iter().map(|i| i.to_owned().to_owned()).collect();
+        let label = "cat";
+
+        let temp_expected = vec!["hello", "<!---cat--->\n", "this", "is", "<!---/cat--->"];
+        let expected: Vec<String> = temp_expected
+            .iter()
+            .map(|i| i.to_owned().to_owned())
+            .collect();
+
+        insert_delimiters(&mut lines, &label);
+
+        assert_eq!(expected, lines);
+    }
 }
