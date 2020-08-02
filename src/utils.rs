@@ -12,19 +12,17 @@ use crate::config::*;
 // updates should only affect certain sections
 
 pub fn init(config: Config) {
-    // not sure about how to handle output format yet, just using this for now
-    let out_fmt = OutputFormat::HTML;
-
     // labels for sections are mapped to filepaths that will be in those sections
-    let (directories_map, entities_map) = build_config_map(&config);
+    let (directories_map, entities_map) = build_config_maps(&config);
 
-    let markdown: Vec<String> = generate_markdown(&config, &directories_map, &entities_map);
+    let markdown = generate_markdown(&config, &directories_map, &entities_map);
 
     write_output(&markdown, &PathBuf::from("index.md"));
+    
     md_to_html(&PathBuf::from("index.md"));
 }
 
-pub fn build_config_map(
+pub fn build_config_maps(
     config: &Config,
 ) -> (HashMap<String, Vec<PathBuf>>, HashMap<String, PathBuf>) {
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
@@ -41,7 +39,7 @@ pub fn build_config_map(
     if let Some(entities) = config.main.entities.to_owned() {
         entity_handler(&entities, &mut entities_map);
     }
-   
+
     (directories_map, entities_map)
 }
 
