@@ -16,6 +16,17 @@ pub fn init(config: Config) {
     let out_fmt = OutputFormat::HTML;
 
     // labels for sections are mapped to filepaths that will be in those sections
+    let (directories_map, entities_map) = build_config_map(&config);
+
+    let markdown: Vec<String> = generate_markdown(&config, &directories_map, &entities_map);
+
+    write_output(&markdown, &PathBuf::from("index.md"));
+    md_to_html(&PathBuf::from("index.md"));
+}
+
+pub fn build_config_map(
+    config: &Config,
+) -> (HashMap<String, Vec<PathBuf>>, HashMap<String, PathBuf>) {
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
 
@@ -30,11 +41,8 @@ pub fn init(config: Config) {
     if let Some(entities) = config.main.entities.to_owned() {
         entity_handler(&entities, &mut entities_map);
     }
-
-    let markdown: Vec<String> = generate_markdown(config, &directories_map, &entities_map);
-
-    write_output(&markdown, &PathBuf::from("index.md"));
-    md_to_html(&PathBuf::from("index.md"));
+   
+    (directories_map, entities_map)
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
@@ -136,7 +144,7 @@ pub fn pandoc_installed() -> bool {
 }
 
 pub fn generate_markdown(
-    config: Config,
+    config: &Config,
     directories: &HashMap<String, Vec<PathBuf>>,
     entities: &HashMap<String, PathBuf>,
 ) -> Vec<String> {
@@ -144,22 +152,22 @@ pub fn generate_markdown(
 
     let mut title: String = "Title".to_owned();
 
-    if let Some(cfg_title) = config.main.title {
-        title = cfg_title;
+    if let Some(cfg_title) = &config.main.title {
+        title = cfg_title.to_owned();
     }
 
     let mut notes: bool = true;
 
-    if let Some(cfg_notes) = config.main.notes {
-        notes = cfg_notes;
+    if let Some(cfg_notes) = &config.main.notes {
+        notes = cfg_notes.to_owned();
     }
 
     let mut order: Vec<String> = get_default_order(&directories, &entities, &notes);
 
-    if let Some(cfg_order) = config.main.order {
+    if let Some(cfg_order) = &config.main.order {
         // TODO: validation here, order should probably only contain strings that
         // match an entity or dir
-        order = dedup_respectfully(&cfg_order);
+        order = dedup_respectfully(cfg_order);
     }
 
     let extension_map: HashMap<String, String> = get_ext_map();
