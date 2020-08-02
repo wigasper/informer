@@ -1,4 +1,5 @@
 pub mod config;
+pub mod update;
 pub mod utils;
 
 #[cfg(test)]
@@ -33,6 +34,7 @@ mod tests {
         let mut expected = vec![
             PathBuf::from("./src/config.rs"),
             PathBuf::from("./src/main.rs"),
+            PathBuf::from("./src/update.rs"),
             PathBuf::from("./src/utils.rs"),
             PathBuf::from("./src/lib.rs"),
         ];

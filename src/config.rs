@@ -1,5 +1,3 @@
-extern crate toml;
-
 use serde::Deserialize;
 use std::fs::File;
 use std::io::prelude::*;

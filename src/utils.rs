@@ -18,7 +18,7 @@ pub fn init(config: Config) {
     let markdown = generate_markdown(&config, &directories_map, &entities_map);
 
     write_output(&markdown, &PathBuf::from("index.md"));
-    
+
     md_to_html(&PathBuf::from("index.md"));
 }
 
@@ -28,15 +28,15 @@ pub fn build_config_maps(
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
 
-    if let Some(logo) = config.main.logo.to_owned() {
+    if let Some(logo) = &config.main.logo {
         entities_map.insert("logo".to_owned(), PathBuf::from(logo));
     }
 
-    if let Some(directories) = config.main.directories.to_owned() {
+    if let Some(directories) = &config.main.directories {
         directory_handler(&directories, &mut directories_map);
     }
 
-    if let Some(entities) = config.main.entities.to_owned() {
+    if let Some(entities) = &config.main.entities {
         entity_handler(&entities, &mut entities_map);
     }
 
