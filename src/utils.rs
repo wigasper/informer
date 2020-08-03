@@ -8,7 +8,6 @@ use mditty::utils::*;
 
 use crate::config::*;
 
-
 // TODO: kind of an issue that this is only working in working directory
 pub fn init(config: Config) {
     // labels for sections are mapped to filepaths that will be in those sections
@@ -205,6 +204,7 @@ pub fn write_output(markdown: &Vec<String>, out_path: &PathBuf) {
     out_buffer.flush().unwrap();
 }
 
+// TODO: problem here, name extensions are writing as .html
 pub fn write_directory(
     markdown: &mut Vec<String>,
     directories: &HashMap<String, Vec<PathBuf>>,

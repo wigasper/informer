@@ -21,29 +21,32 @@ pub fn update(config: Config) {
     let temp_index_path = PathBuf::from(format!(".tmp.{}", index_path.to_str().unwrap()));
 
     // move index to temp
-    let mut call = Command::new("mv").arg(&index_path).arg(&temp_index_path).spawn().expect("mv failed");
-    
+    let mut call = Command::new("mv")
+        .arg(&index_path)
+        .arg(&temp_index_path)
+        .spawn()
+        .expect("mv failed");
+
     let markdown = get_updated_markdown(&temp_index_path, &config);
 
     write_output(&markdown, &index_path);
 
-    call = Command::new("rm").arg(&temp_index_path).spawn().expect("rm failed");
+    call = Command::new("rm")
+        .arg(&temp_index_path)
+        .spawn()
+        .expect("rm failed");
 }
 
 pub fn get_updated_markdown(index_path: &PathBuf, config: &Config) -> Vec<String> {
     let (directories_map, entities_map) = build_config_maps(config);
     // compile regexes
-    let delim_start = Regex::new(r"^<---([^-]*)--->$").unwrap();
-    let delim_stop = Regex::new(r"^<---/.*--->$").unwrap();
+    let delim_start = Regex::new(r"^<!---([^-]*)--->$").unwrap();
+    let delim_stop = Regex::new(r"^<!---/.*--->$").unwrap();
 
     let mut markdown: Vec<String> = Vec::new();
     // read in current index line for line
     let file = File::open(&index_path).unwrap_or_else(|why| {
-        panic!(
-            "Could not open {}: {}",
-            index_path.to_str().unwrap(),
-            why
-        );
+        panic!("Could not open {}: {}", index_path.to_str().unwrap(), why);
     });
 
     let mut delim_flag: bool = false;
@@ -74,10 +77,9 @@ pub fn get_updated_markdown(index_path: &PathBuf, config: &Config) -> Vec<String
                 delim_lines.push(this_line);
             }
         } else if delim_start.is_match(&this_line.as_str()) {
-            println!("matched start delim");
             delim_flag = true;
             let caps = delim_start.captures(&this_line.as_str()).unwrap();
-            section_label = caps.get(0).unwrap().as_str().to_owned();
+            section_label = caps.get(1).unwrap().as_str().to_owned();
         } else {
             this_line.push_str("\n");
             markdown.push(this_line);
@@ -94,21 +96,23 @@ pub fn section_handler(
 ) {
     // can pass this probably to avoid creating every time
     // this does not work
-    let path_regex = Regex::new(r"^\[.*\]\((.*)\)\s\|.*$").unwrap();
+    let path_regex = Regex::new(r"^\[.*\]\((.*)\)\s\|.*").unwrap();
 
     let mut lines_out: Vec<String> = Vec::new();
 
     if directories.contains_key(label) {
         let mut needed_paths: Vec<PathBuf> = directories.get(label).unwrap().to_owned();
-
+        println!("{:?}", needed_paths);
         let current_items: Vec<String> = Vec::new();
 
         for line in lines.iter() {
+            println!("{}", line);
             if path_regex.is_match(line) {
                 let caps = path_regex.captures(line).unwrap();
-                let this_path = caps.get(0).unwrap().as_str();
+                let this_path = caps.get(1).unwrap().as_str();
                 println!("{:?}", this_path);
-                needed_paths.retain(|x| x != &PathBuf::from(this_path));
+                //let temp_path = PathBuf::from(this_path);
+                needed_paths.retain(|x| x.to_str().unwrap() != this_path);
                 lines_out.push(line.to_owned());
             } else {
                 lines_out.push(line.to_owned());
@@ -116,7 +120,7 @@ pub fn section_handler(
         }
 
         for path in needed_paths.iter() {
-            println!("{:?}", path);
+            //println!("{:?}", path);
             let name = path.file_name().unwrap();
             lines_out.push(format!(
                 "[{}]({}) | Description\n",

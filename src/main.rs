@@ -1,8 +1,8 @@
 extern crate clap;
 
 use informer::config::*;
-use informer::utils::*;
 use informer::update::*;
+use informer::utils::*;
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -39,7 +39,7 @@ fn main() {
             Arg::with_name("update")
                 .short("u")
                 .long("update")
-                .long_help("Update an existing index")
+                .long_help("Update an existing index"),
         )
         .get_matches();
 
@@ -50,7 +50,7 @@ fn main() {
         let cfg_path = PathBuf::from(cfg_path_str);
         cfg = load_config(&cfg_path);
     }
-    
+
     if matches.is_present("update") {
         update(cfg);
     } else {

@@ -9,20 +9,8 @@ mod tests {
     use std::process::Command;
 
     use crate::config::*;
-    use crate::utils::*;
     use crate::update::*;
-
-    use regex::Regex;
-    
-    #[test]
-    fn test_regex() {
-        let delim_start = Regex::new(r"^<---([^-]*)--->$").unwrap();
-        let line = "<---dog--->".to_owned();
-
-        if delim_start.is_match(&line.as_str()) {
-            println!("match");
-        }
-    }
+    use crate::utils::*;
 
     #[test]
     fn test_pandoc_to_html() {
@@ -129,7 +117,7 @@ mod tests {
     fn get_updated_markdown_0() {
         let mut call = Command::new("cd").arg("./test/project").spawn().expect("cd failed");
         call = Command::new("touch").arg("./scripts/new_script.py").spawn().expect("touch failed");
-        
+
         let config = load_config(&PathBuf::from("config.toml"));
 
         let updated_markdown = get_updated_markdown(&PathBuf::from("index.md"), &config);
