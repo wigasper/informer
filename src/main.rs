@@ -2,6 +2,7 @@ extern crate clap;
 
 use informer::config::*;
 use informer::utils::*;
+use informer::update::*;
 
 use std::env;
 use std::path::{Path, PathBuf};
@@ -34,6 +35,12 @@ fn main() {
                 .default_value("")
                 .long_help("Path to a TOML config file, see sample_config.toml for an example"),
         )
+        .arg(
+            Arg::with_name("update")
+                .short("u")
+                .long("update")
+                .long_help("Update an existing index")
+        )
         .get_matches();
 
     let mut cfg: Config = get_default_config();
@@ -43,6 +50,10 @@ fn main() {
         let cfg_path = PathBuf::from(cfg_path_str);
         cfg = load_config(&cfg_path);
     }
-
-    init(cfg);
+    
+    if matches.is_present("update") {
+        update(cfg);
+    } else {
+        init(cfg);
+    }
 }

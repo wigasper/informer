@@ -10,6 +10,19 @@ mod tests {
 
     use crate::config::*;
     use crate::utils::*;
+    use crate::update::*;
+
+    use regex::Regex;
+    
+    #[test]
+    fn test_regex() {
+        let delim_start = Regex::new(r"^<---([^-]*)--->$").unwrap();
+        let line = "<---dog--->".to_owned();
+
+        if delim_start.is_match(&line.as_str()) {
+            println!("match");
+        }
+    }
 
     #[test]
     fn test_pandoc_to_html() {
@@ -100,7 +113,7 @@ mod tests {
         let mut lines = temp_lines.iter().map(|i| i.to_owned().to_owned()).collect();
         let label = "cat";
 
-        let temp_expected = vec!["hello", "<!---cat--->\n", "this", "is", "<!---/cat--->"];
+        let temp_expected = vec!["hello", "<!---cat--->\n", "this", "is", "<!---/cat--->\n"];
         let expected: Vec<String> = temp_expected
             .iter()
             .map(|i| i.to_owned().to_owned())
@@ -110,4 +123,22 @@ mod tests {
 
         assert_eq!(expected, lines);
     }
+
+    /*
+    #[test]
+    fn get_updated_markdown_0() {
+        let mut call = Command::new("cd").arg("./test/project").spawn().expect("cd failed");
+        call = Command::new("touch").arg("./scripts/new_script.py").spawn().expect("touch failed");
+        
+        let config = load_config(&PathBuf::from("config.toml"));
+
+        let updated_markdown = get_updated_markdown(&PathBuf::from("index.md"), &config);
+
+        for line in updated_markdown.iter() {
+            println!("{}", line);
+        }
+
+        call = Command::new("rm").arg("./scripts/new_script.py").spawn().expect("rm failed");
+        call = Command::new("rm").arg("./scripts/new_script.md").spawn().expect("rm failed");
+    }*/
 }
