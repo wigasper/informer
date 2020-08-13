@@ -332,7 +332,7 @@ pub fn get_default_order(
 // inserts delimiters for update function later
 pub fn insert_delimiters(lines: &mut Vec<String>, label: &str) {
     lines.insert(1, format!("<!---{}--->\n", label));
-    lines.push(format!("<!---/{}--->", label));
+    lines.push(format!("<!---/{}--->\n", label));
 }
 
 // greedily dedups with (greedy) respect for original order
