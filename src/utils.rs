@@ -426,7 +426,12 @@ pub fn get_pretty_name(path_in: &PathBuf, rev_ext_map: &HashMap<String, String>)
             name = path.file_name().unwrap().to_str().unwrap().to_owned();
         }
     } else {
-        name = path.file_name().unwrap().to_str().unwrap().to_owned();
+        path = path_in.to_owned();
+        if path.file_name().unwrap().to_str().unwrap() == "index.html" {
+            name = path.parent().unwrap().file_name().unwrap().to_str().unwrap().to_owned();
+        } else {
+            name = path.file_name().unwrap().to_str().unwrap().to_owned();
+        }
     }
 
     name
