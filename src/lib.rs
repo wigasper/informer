@@ -8,6 +8,8 @@ mod tests {
     use std::path::PathBuf;
     use std::process::Command;
 
+    use mditty::utils::*;
+
     use crate::config::*;
     use crate::update::*;
     use crate::utils::*;
@@ -112,6 +114,16 @@ mod tests {
         assert_eq!(expected, lines);
     }
 
+    #[test]
+    fn get_pretty_name_0() {
+        let path = PathBuf::from("test/project/scripts/test.html");
+        let ext_map = get_ext_map();
+        let rev_ext_map = reverse_map(&ext_map);
+
+        let name = get_pretty_name(&path, &rev_ext_map);
+
+        assert_eq!(name, "test.py".to_owned());
+    }
     /*
     #[test]
     fn get_updated_markdown_0() {
