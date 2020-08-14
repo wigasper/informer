@@ -1,4 +1,5 @@
 pub mod config;
+pub mod update;
 pub mod utils;
 
 #[cfg(test)]
@@ -7,7 +8,10 @@ mod tests {
     use std::path::PathBuf;
     use std::process::Command;
 
+    use mditty::utils::*;
+
     use crate::config::*;
+    use crate::update::*;
     use crate::utils::*;
 
     #[test]
@@ -33,6 +37,7 @@ mod tests {
         let mut expected = vec![
             PathBuf::from("./src/config.rs"),
             PathBuf::from("./src/main.rs"),
+            PathBuf::from("./src/update.rs"),
             PathBuf::from("./src/utils.rs"),
             PathBuf::from("./src/lib.rs"),
         ];
@@ -108,4 +113,32 @@ mod tests {
 
         assert_eq!(expected, lines);
     }
+
+    #[test]
+    fn get_pretty_name_0() {
+        let path = PathBuf::from("test/project/scripts/test.html");
+        let ext_map = get_ext_map();
+        let rev_ext_map = reverse_map(&ext_map);
+
+        let name = get_pretty_name(&path, &rev_ext_map);
+
+        assert_eq!(name, "test.py".to_owned());
+    }
+    /*
+    #[test]
+    fn get_updated_markdown_0() {
+        let mut call = Command::new("cd").arg("./test/project").spawn().expect("cd failed");
+        call = Command::new("touch").arg("./scripts/new_script.py").spawn().expect("touch failed");
+
+        let config = load_config(&PathBuf::from("config.toml"));
+
+        let updated_markdown = get_updated_markdown(&PathBuf::from("index.md"), &config);
+
+        for line in updated_markdown.iter() {
+            println!("{}", line);
+        }
+
+        call = Command::new("rm").arg("./scripts/new_script.py").spawn().expect("rm failed");
+        call = Command::new("rm").arg("./scripts/new_script.md").spawn().expect("rm failed");
+    }*/
 }

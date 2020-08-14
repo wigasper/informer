@@ -1,40 +1,45 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::path::PathBuf;
+use std::io::BufReader;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use mditty::utils::*;
 
 use crate::config::*;
 
-// TODO: this needs to be able to update an existing report
-// updates should only affect certain sections
-
+// TODO: kind of an issue that this is only working in working directory
 pub fn init(config: Config) {
-    // not sure about how to handle output format yet, just using this for now
-    let out_fmt = OutputFormat::HTML;
-
     // labels for sections are mapped to filepaths that will be in those sections
+    let (directories_map, entities_map) = build_config_maps(&config);
+
+    let markdown = generate_markdown(&config, &directories_map, &entities_map);
+
+    write_output(&markdown, &PathBuf::from("index.md"));
+
+    md_to_html(&PathBuf::from("index.md"));
+}
+
+pub fn build_config_maps(
+    config: &Config,
+) -> (HashMap<String, Vec<PathBuf>>, HashMap<String, PathBuf>) {
     let mut directories_map: HashMap<String, Vec<PathBuf>> = HashMap::new();
     let mut entities_map: HashMap<String, PathBuf> = HashMap::new();
 
-    if let Some(logo) = config.main.logo.to_owned() {
+    if let Some(logo) = &config.main.logo {
         entities_map.insert("logo".to_owned(), PathBuf::from(logo));
     }
 
-    if let Some(directories) = config.main.directories.to_owned() {
+    if let Some(directories) = &config.main.directories {
         directory_handler(&directories, &mut directories_map);
     }
 
-    if let Some(entities) = config.main.entities.to_owned() {
+    if let Some(entities) = &config.main.entities {
         entity_handler(&entities, &mut entities_map);
     }
 
-    let markdown: Vec<String> = generate_markdown(config, &directories_map, &entities_map);
-
-    write_output(&markdown, &PathBuf::from("index.md"));
-    md_to_html(&PathBuf::from("index.md"));
+    (directories_map, entities_map)
 }
 
 pub fn entity_handler(entities: &Vec<Vec<String>>, entities_map: &mut HashMap<String, PathBuf>) {
@@ -73,7 +78,13 @@ pub fn directory_handler(
         let mut files: Vec<PathBuf> = Vec::new();
         // Special case: Q2 exports
         if entry[0] == "QIIME2 Exports" {
-            files = find(&PathBuf::from(entry[1].to_owned()), &[&"html".to_owned()]);
+            let temp_files = find(&PathBuf::from(entry[1].to_owned()), &[&"html".to_owned()]);
+
+            for file in temp_files.iter() {
+                if file.file_name() == Path::new("index.html").file_name() {
+                    files.push(file.to_owned());
+                }
+            }
         } else {
             let temp_files: Vec<PathBuf> = find(&PathBuf::from(entry[1].to_owned()), &extensions);
 
@@ -136,7 +147,7 @@ pub fn pandoc_installed() -> bool {
 }
 
 pub fn generate_markdown(
-    config: Config,
+    config: &Config,
     directories: &HashMap<String, Vec<PathBuf>>,
     entities: &HashMap<String, PathBuf>,
 ) -> Vec<String> {
@@ -144,22 +155,22 @@ pub fn generate_markdown(
 
     let mut title: String = "Title".to_owned();
 
-    if let Some(cfg_title) = config.main.title {
-        title = cfg_title;
+    if let Some(cfg_title) = &config.main.title {
+        title = cfg_title.to_owned();
     }
 
     let mut notes: bool = true;
 
-    if let Some(cfg_notes) = config.main.notes {
-        notes = cfg_notes;
+    if let Some(cfg_notes) = &config.main.notes {
+        notes = cfg_notes.to_owned();
     }
 
     let mut order: Vec<String> = get_default_order(&directories, &entities, &notes);
 
-    if let Some(cfg_order) = config.main.order {
+    if let Some(cfg_order) = &config.main.order {
         // TODO: validation here, order should probably only contain strings that
         // match an entity or dir
-        order = dedup_respectfully(&cfg_order);
+        order = dedup_respectfully(cfg_order);
     }
 
     let extension_map: HashMap<String, String> = get_ext_map();
@@ -200,6 +211,7 @@ pub fn write_output(markdown: &Vec<String>, out_path: &PathBuf) {
     out_buffer.flush().unwrap();
 }
 
+// TODO: problem here, name extensions are writing as .html
 pub fn write_directory(
     markdown: &mut Vec<String>,
     directories: &HashMap<String, Vec<PathBuf>>,
@@ -212,20 +224,23 @@ pub fn write_directory(
         .get(label)
         .unwrap_or_else(|| panic!("No '{}' key in directories"));
 
+    let rev_ext_map = reverse_map(extension_map);
+
     let mut lines: Vec<String> = Vec::new();
     lines.push(format!("## {}\n\n", label));
     lines.push("File | Notes\n--- | ---\n".to_owned());
     for path in paths.iter() {
-        let name = path.file_name().unwrap_or_else(|| {
-            panic!(
-                "Error with file_name() call in utils::write_directory() for {:?}",
-                path
-            )
-        });
+        let name = get_pretty_name(&path, &rev_ext_map);
+        //let name = path.file_name().unwrap_or_else(|| {
+        //  panic!(
+        //        "Error with file_name() call in utils::write_directory() for {:?}",
+        //        path
+        //    )
+        //});
 
         lines.push(format!(
             "[{}]({}) | Description\n",
-            name.to_str().unwrap(),
+            name,
             path.to_str().unwrap()
         ));
     }
@@ -374,4 +389,55 @@ pub fn find(parent_dir: &PathBuf, target_extensions: &[&String]) -> Vec<PathBuf>
     }
 
     found
+}
+
+// this seems a kind of dumb way to determine the prior extension
+// might be better to just store it before
+//
+// TODO this is so bad
+//
+// also a bad function name, doesn't really make it pretty
+pub fn get_pretty_name(path_in: &PathBuf, rev_ext_map: &HashMap<String, String>) -> String {
+    let mut name = String::new();
+
+    let mut path = path_in.to_owned();
+
+    path.set_extension("md");
+
+    if path.exists() {
+        let file = File::open(&path).unwrap_or_else(|why| {
+            panic!("Could not open {}: {}", path.to_str().unwrap(), why);
+        });
+        let mut buf_reader = BufReader::new(file);
+
+        let mut first_line = String::new();
+        buf_reader.read_line(&mut first_line);
+
+        if first_line.starts_with("```") {
+            let file_type = first_line.trim_start_matches("`").trim();
+
+            let extension = rev_ext_map.get(file_type).unwrap_or_else(|| {
+                panic!("Problem at utils::get_pretty_name");
+            });
+            let mut temp_path = path.to_owned();
+            temp_path.set_extension(extension);
+            name = temp_path.file_name().unwrap().to_str().unwrap().to_owned();
+        } else {
+            name = path.file_name().unwrap().to_str().unwrap().to_owned();
+        }
+    } else {
+        name = path.file_name().unwrap().to_str().unwrap().to_owned();
+    }
+
+    name
+}
+
+pub fn reverse_map(map: &HashMap<String, String>) -> HashMap<String, String> {
+    let mut map_out = HashMap::new();
+
+    for (key, val) in map.iter() {
+        map_out.insert(val.to_owned(), key.to_owned());
+    }
+
+    map_out
 }

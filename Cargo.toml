@@ -11,3 +11,4 @@ mditty = { git = "https://github.com/wigasper/mditty" }
 toml = "0.5"
 serde = { version = "1.0.114", features = ["derive"] }
 clap = "2.33.1"
+regex = "1"
