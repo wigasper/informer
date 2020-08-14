@@ -102,16 +102,12 @@ pub fn section_handler(
 
     if directories.contains_key(label) {
         let mut needed_paths: Vec<PathBuf> = directories.get(label).unwrap().to_owned();
-        println!("{:?}", needed_paths);
         let current_items: Vec<String> = Vec::new();
 
         for line in lines.iter() {
-            println!("{}", line);
             if path_regex.is_match(line) {
                 let caps = path_regex.captures(line).unwrap();
                 let this_path = caps.get(1).unwrap().as_str();
-                println!("{:?}", this_path);
-                //let temp_path = PathBuf::from(this_path);
                 needed_paths.retain(|x| x.to_str().unwrap() != this_path);
                 lines_out.push(line.to_owned());
             } else {
@@ -120,7 +116,6 @@ pub fn section_handler(
         }
 
         for path in needed_paths.iter() {
-            //println!("{:?}", path);
             let name = path.file_name().unwrap();
             lines_out.push(format!(
                 "[{}]({}) | Description\n",
