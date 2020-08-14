@@ -11,6 +11,9 @@ use mditty::utils::*;
 
 use regex::Regex;
 
+// TODO: need logic that looks at config and if there is a section that
+// needs to be added it will add it
+
 pub fn update(config: Config) {
     // check for index, if not exists, quit
     let index_path = PathBuf::from("index.md");
