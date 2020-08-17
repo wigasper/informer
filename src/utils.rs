@@ -186,6 +186,7 @@ pub fn generate_markdown(
             // All other cases: either file or directory
             &_ => {
                 if directories.contains_key(item) {
+                    markdown.push(format!("## {}\n\n", item));
                     write_directory(&mut markdown, &directories, &extension_map, item);
                 } else if entities.contains_key(item) {
                     write_entity(&mut markdown, &entities, item);
@@ -227,7 +228,7 @@ pub fn write_directory(
     let rev_ext_map = reverse_map(extension_map);
 
     let mut lines: Vec<String> = Vec::new();
-    lines.push(format!("## {}\n\n", label));
+    //lines.push(format!("## {}\n\n", label));
     lines.push("File | Notes\n--- | ---\n".to_owned());
     for path in paths.iter() {
         let name = get_pretty_name(&path, &rev_ext_map);
@@ -346,7 +347,7 @@ pub fn get_default_order(
 
 // inserts delimiters for update function later
 pub fn insert_delimiters(lines: &mut Vec<String>, label: &str) {
-    lines.insert(1, format!("<!---{}--->\n", label));
+    lines.insert(0, format!("<!---{}--->\n", label));
     lines.push(format!("<!---/{}--->\n", label));
 }
 

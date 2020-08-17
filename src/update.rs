@@ -33,6 +33,8 @@ pub fn update(config: Config) {
     let markdown = get_updated_markdown(&temp_index_path, &config);
 
     write_output(&markdown, &index_path);
+    
+    md_to_html(&PathBuf::from("index.md"));
 
     call = Command::new("rm")
         .arg(&temp_index_path)
@@ -76,7 +78,7 @@ pub fn get_updated_markdown(index_path: &PathBuf, config: &Config) -> Vec<String
                 // probably can delete:
                 section_label = "".to_owned();
             } else {
-                this_line.push_str("\n");
+                //this_line.push_str("\n");
                 delim_lines.push(this_line);
             }
         } else if delim_start.is_match(&this_line.as_str()) {
@@ -112,17 +114,21 @@ pub fn section_handler(
                 let caps = path_regex.captures(line).unwrap();
                 let this_path = caps.get(1).unwrap().as_str();
                 needed_paths.retain(|x| x.to_str().unwrap() != this_path);
-                lines_out.push(line.to_owned());
+                lines_out.push(format!("{}\n", line.to_owned()));
             } else {
-                lines_out.push(line.to_owned());
+                lines_out.push(format!("{}\n", line.to_owned()));
             }
         }
+        
+        let extension_map = get_ext_map();
+        let rev_ext_map = reverse_map(&extension_map);
 
+        // this is repeated
         for path in needed_paths.iter() {
-            let name = path.file_name().unwrap();
+            let name = get_pretty_name(&path, &rev_ext_map);
             lines_out.push(format!(
                 "[{}]({}) | Description\n",
-                name.to_str().unwrap(),
+                name,
                 path.to_str().unwrap()
             ));
         }
