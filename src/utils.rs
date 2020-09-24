@@ -76,8 +76,8 @@ pub fn directory_handler(
         }
 
         let mut files: Vec<PathBuf> = Vec::new();
-        // Special case: Q2 exports
-        if entry[0] == "QIIME2 Exports" {
+        // Special cases: Q2 exports and notebooks
+        if entry[0] == "QIIME2 Exports" || entry[0] == "Notebooks" {
             let temp_files = find(&PathBuf::from(entry[1].to_owned()), &[&"html".to_owned()]);
 
             for file in temp_files.iter() {
