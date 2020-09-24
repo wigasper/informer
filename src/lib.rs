@@ -103,7 +103,7 @@ mod tests {
         let mut lines = temp_lines.iter().map(|i| i.to_owned().to_owned()).collect();
         let label = "cat";
 
-        let temp_expected = vec!["hello", "<!---cat--->\n", "this", "is", "<!---/cat--->\n"];
+        let temp_expected = vec!["<!---cat--->\n", "hello", "this", "is", "<!---/cat--->\n"];
         let expected: Vec<String> = temp_expected
             .iter()
             .map(|i| i.to_owned().to_owned())
