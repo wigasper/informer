@@ -8,3 +8,4 @@ This is an extreme minimum working example, many things are bad, many things nee
 
 * Needs to detect changes in scripts and regenerate md and then pandoc accordingly
 * Needs to note additional sections that are added to config in an update and act accordingly
+* Maybe something (a flag) to format some of the QIIME2 output so that it can really be used
